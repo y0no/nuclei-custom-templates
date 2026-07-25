@@ -1,0 +1,53 @@
+id: dolibarr-public-endpoints
+
+info:
+  name: Dolibarr - Exposed Public Endpoints (module & info disclosure)
+  author: y0no
+  severity: low
+  description: |
+    Enumerates Dolibarr `public/` endpoints reachable without authentication.
+    A reachable endpoint reveals which modules are enabled and, for several of
+    them, leaks data or exposes self-service forms usable by an anonymous
+    attacker (member list/registration, prospect creation, ticket list, user
+    vCard export, agenda ICS export). Each hit is reported with its matched URL.
+
+    These pages are only served when the corresponding module + its public
+    access option are enabled, so a 200 here is a real exposure, not just a
+    default file.
+  classification:
+    cwe-id: CWE-200
+  metadata:
+    max-request: 8
+    verified: true
+  tags: dolibarr,exposure,disclosure,enum
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/public/members/public_list.php"
+      - "{{BaseURL}}/public/members/new.php"
+      - "{{BaseURL}}/public/company/new.php"
+      - "{{BaseURL}}/public/ticket/list.php"
+      - "{{BaseURL}}/public/ticket/index.php"
+      - "{{BaseURL}}/public/users/view.php"
+      - "{{BaseURL}}/public/agenda/agendaexport.php"
+      - "{{BaseURL}}/public/notice.php"
+    stop-at-first-match: false
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      # a real Dolibarr public page, not a login redirect / access-forbidden
+      - type: dsl
+        dsl:
+          - 'contains(to_lower(body), "dolibarr")'
+      - type: word
+        part: body
+        words:
+          - "If you believe you are authorized"
+          - "Bad value for security key"
+          - "authentication mode = dolibarr"
+        condition: or
+        negative: true

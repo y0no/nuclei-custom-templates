@@ -1,0 +1,17 @@
+id: dolibarr-workflow
+
+info:
+  name: Dolibarr - Unauthenticated Checks
+  author: y0no
+  description: |
+    Runs the Dolibarr checks in order: fingerprint the version first, then the
+    exposure checks and the version-based advisory triage. Tag-based so it is
+    independent of file locations. Run with the repo as templates dir:
+      nuclei -w workflows/dolibarr-workflow.yaml -t http/ -u https://target
+  tags: dolibarr
+
+workflows:
+  - tags: dolibarr,fingerprint
+    subtemplates:
+      - tags: dolibarr,exposure
+      - tags: dolibarr,version

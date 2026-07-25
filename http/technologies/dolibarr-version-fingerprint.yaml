@@ -1,0 +1,50 @@
+id: dolibarr-version-fingerprint
+
+info:
+  name: Dolibarr - Version Fingerprint (unauthenticated)
+  author: y0no
+  severity: info
+  description: |
+    Detects a Dolibarr instance and extracts its exact version from the public
+    login page (asset cache-buster ?version=, footer infoVersion div, or changelog).
+    No authentication required. Use the extracted version to map against known
+    advisories (most Dolibarr RCE/LFI CVEs require authentication, so version is
+    the primary unauth signal).
+  reference:
+    - https://github.com/projectdiscovery/nuclei-templates/blob/main/http/exposed-panels/dolibarr-panel.yaml
+  classification:
+    cwe-id: CWE-200
+  metadata:
+    max-request: 2
+    shodan-query: http.title:"Dolibarr"
+    verified: true
+  tags: dolibarr,fingerprint,tech,disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+      - "{{BaseURL}}/index.php"
+    stop-at-first-match: true
+
+    matchers-condition: and
+    matchers:
+      - type: dsl
+        dsl:
+          - 'contains(to_lower(body), "dolibarr")'
+      - type: dsl
+        dsl:
+          - 'contains(header, "DOLSESSID") || contains(body, "content=\"Dolibarr Development Team\"") || contains(body, "amp;version=")'
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        name: version
+        part: body
+        group: 1
+        regex:
+          - '<div id="infoVersion">Dolibarr ([0-9]+\.[0-9]+\.[0-9]+)</div>'
+          - '(?:amp;|[?&])version=([0-9]+\.[0-9]+\.[0-9]+)'
+          - 'Dolibarr ([0-9]+\.[0-9]+\.[0-9]+)'

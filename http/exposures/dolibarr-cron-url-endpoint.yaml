@@ -1,0 +1,36 @@
+id: dolibarr-cron-url-endpoint
+
+info:
+  name: Dolibarr - Cron-by-URL Endpoint Exposed (module detection)
+  author: y0no
+  severity: info
+  description: |
+    Detects the public scheduled-jobs runner public/cron/cron_run_jobs_by_url.php.
+    When reachable it confirms the Cron module is enabled and jobs can be
+    triggered over HTTP by anyone who knows CRON_KEY (the security key).
+
+    NOTE — this is detection, not a bypass: the endpoint rejects an empty key
+    (`Securitykey is required`) before comparing it to CRON_KEY, so a blank key
+    does not work. The value is in exposure mapping: if CRON_KEY leaks (weak,
+    logged in URLs, or brute-forceable) an attacker can run every configured job.
+  classification:
+    cwe-id: CWE-306
+  metadata:
+    max-request: 1
+    verified: true
+  tags: dolibarr,cron,exposure,detect
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/public/cron/cron_run_jobs_by_url.php"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "Securitykey is required. Check setup of cron jobs module."
+      - type: status
+        status:
+          - 200

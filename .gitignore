@@ -1,0 +1,6 @@
+*.log
+out.json
+out.txt
+*-findings.*
+evidence-*.txt
+.DS_Store

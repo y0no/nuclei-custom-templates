@@ -1,0 +1,62 @@
+id: dolibarr-install-exposed
+
+info:
+  name: Dolibarr - Installer Exposed & Usable (pre-auth takeover)
+  author: y0no
+  severity: critical
+  description: |
+    /install/index.php serves the usable installer/upgrade wizard. This happens
+    on a FRESH, un-configured Dolibarr (empty/missing conf.php): the wizard runs
+    for anyone, allowing a pre-authentication full takeover (point it at an
+    attacker DB, reach the admin-creation / DB-config step).
+
+    Behaviour verified against Dolibarr 20.0.4 (official docker image):
+      - locked + configured  -> minimal 495-byte "remove install.lock" page (no match)
+      - unlocked + configured -> HTTP 302 redirect (no match; conf.php already set)
+      - fresh + un-installed   -> full wizard ("Dolibarr install or upgrade") -> MATCH
+    The status:200 matcher already excludes the 302 case. The negative matcher on
+    the lock/forbidden strings is defense-in-depth: it suppresses variants/older
+    versions that render the installer chrome WITH an embedded lock warning,
+    which the stock `dolibarr-installer` template would report as a false positive.
+  reference:
+    - https://github.com/projectdiscovery/nuclei-templates/blob/main/http/misconfiguration/installer/dolibarr-installer.yaml
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H
+    cvss-score: 10.0
+    cwe-id: CWE-284
+  metadata:
+    max-request: 1
+    shodan-query: title:"Dolibarr install or upgrade"
+    verified: true
+  tags: dolibarr,install,misconfig,exposure,takeover
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/install/index.php"
+
+    matchers-condition: and
+    matchers:
+      # installer wizard is present
+      - type: word
+        part: body
+        words:
+          - "Dolibarr install or upgrade"
+          - "browser language"
+        condition: and
+      # ...and it is NOT the locked/forbidden variant
+      - type: word
+        part: body
+        words:
+          - "install.lock"
+          - "forbidden by security"
+          - "must remove the file install.lock"
+        condition: or
+        negative: true
+      - type: word
+        part: header
+        words:
+          - "text/html"
+      - type: status
+        status:
+          - 200
