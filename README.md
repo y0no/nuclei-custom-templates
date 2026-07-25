@@ -8,6 +8,15 @@ not (yet) well covered by the official template set.
 Layout mirrors the official `projectdiscovery/nuclei-templates` repo so it composes
 cleanly with `nuclei -t` and standard tag/severity filtering.
 
+> **Upstream-first — why this repo exists.** It holds only templates that do **not**
+> (yet) meet the official [ProjectDiscovery CONTRIBUTING](https://github.com/projectdiscovery/nuclei-templates/blob/main/CONTRIBUTING.md)
+> requirements: version-based triage (PD accepts complete PoCs only), pentest-practical
+> variants (e.g. session-cookie/SSO auth), or work-in-progress checks. Any template that
+> *does* qualify — a complete, verified PoC — should be contributed to
+> `projectdiscovery/nuclei-templates` **as soon as possible**. This is a staging /
+> overflow area, not a competitor: the goal is to give back to open source whenever a
+> template is upstream-ready.
+
 ## Layout
 
 ```
@@ -61,6 +70,32 @@ nuclei -w workflows/dolibarr-workflow.yaml -t http/ -u https://target
 - `http/exposures/` — installer takeover exposure, public endpoint enumeration, cron-by-url endpoint
 - `http/version-triage/dolibarr/` — 6 advisories affecting 20.x, each at its real severity/CVSS
   (critical `MAIN_ODT_AS_PDF` RCE, 3× high RCE, medium LFI, low injection)
+
+## Authentication options (for authenticated templates)
+
+Authenticated templates ship in two flavours so they work against any auth backend:
+
+| Flavour | How auth is provided | Requests | Use when |
+|---------|----------------------|----------|----------|
+| **Form login** (`CVE-*.yaml`) | `-var username=` / `-var password=` — the template fetches the CSRF token and posts the login form | 3 | native Dolibarr auth, LDAP — anywhere the login form accepts a username/password |
+| **Session cookie / SSO** (`CVE-*-cookie.yaml`) | `-var cookie='DOLSESSID_<hash>=<value>'` — you supply an already-authenticated session | 1 | **SSO (SAML/OIDC/CAS/OAuth), 2FA, or any backend where the login form can't be scripted** |
+
+```bash
+# form login (native auth)
+nuclei -t http/cves/2026/CVE-2026-34036.yaml -u https://target \
+  -var username=USER -var password=PASS
+
+# session cookie (SSO-friendly) — grab DOLSESSID from an authenticated browser
+# session (DevTools > Application > Cookies, or your intercepting proxy)
+nuclei -t http/cves/2026/CVE-2026-34036-cookie.yaml -u https://target \
+  -var cookie='DOLSESSID_9a96...=abcdef0123456789'
+```
+
+Guidance for new authenticated templates: provide the **form-login** variant for
+upstream submission (PD convention is `{{username}}`/`{{password}}`), and add a
+**`-cookie`** companion here for SSO/2FA targets. The cookie variant is a single
+request and matches only when the session is valid, so a bogus/expired cookie yields
+no false positive.
 
 ## Conventions for new templates
 
